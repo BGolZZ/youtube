@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2560 1440" role="img" aria-label="Dunfaire YouTube channel banner">
+  <title>Dunfaire YouTube channel banner, 2560 x 1440, logo and tagline inside the 1546 x 423 centre safe area</title>
+  <!-- light theme of dunfaire.com: background #fff, text #0b191c, accent #006f79; type Inter Tight -->
+  <defs>
+    <style>
+      @font-face { font-family: "Inter Tight"; src: url("assets/inter-tight-latin.woff2") format("woff2"); font-weight: 400 700; }
+      text { font-family: "Inter Tight", Helvetica, Arial, sans-serif; }
+    </style>
+  </defs>
+
+  <rect width="2560" height="1440" fill="#ffffff"/>
+
+  <!-- safe area 1546 x 423: x 507 to 2053, y 508.5 to 931.5 -->
+  <g id="safe">
+    <!-- official wordmark for light backgrounds, unchanged: 1769 x 356 scaled to 1100 x 221.4, centred -->
+    <image id="wordmark" x="730" y="562" width="1100" height="221.4" xlink:href="assets/official/dunfaire-logo-light.svg" href="assets/official/dunfaire-logo-light.svg"/>
+    <text id="tagline" x="1280" y="872" text-anchor="middle" font-size="50" font-weight="600" letter-spacing="-0.5" fill="#0b191c">See everything. <tspan fill="#006f79">Know what matters.</tspan> Act with evidence.</text>
+  </g>
+</svg>
