@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dunfaire Watchman video</title>
+<style>
+/* Palette: Dunfaire deck dark theme (Dunfaire_Watchman_Dark.pptx) + the official logo cyan #00CBF8. English only. */
+@font-face { font-family: "Inter Tight"; src: url("../src/assets/inter-tight-latin.woff2") format("woff2"); font-weight: 100 900; }
+:root { --bg:#0B1416; --panel:#122023; --line:#2A3D41; --text:#EAF2F3; --dim:#8FA3A7; --cyan:#00CBF8; --green:#55D69E; --red:#F26B73; --violet:#8B5CF6; --blue:#3B5BDB; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: "Inter Tight", Inter, Arial, sans-serif; color: var(--text); background: var(--bg); }
+#glow1, #glow2 { position: absolute; border-radius: 50%; filter: blur(140px); }
+#glow1 { width: 900px; height: 900px; background: rgba(0,203,248,.13); }
+#glow2 { width: 800px; height: 800px; background: rgba(85,214,158,.09); }
+#gridbg { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 80px 80px; }
+.sc { position: absolute; inset: 0; }
+.abs { position: absolute; }
+.lab { position: absolute; font-family: Consolas, monospace; font-size: 24px; letter-spacing: .22em; color: var(--cyan); }
+.h1 { position: absolute; font-size: 78px; font-weight: 700; line-height: 1.04; letter-spacing: -.02em; }
+.sub { position: absolute; font-size: 32px; line-height: 1.3; color: var(--dim); }
+.big { position: absolute; font-size: 46px; font-weight: 600; line-height: 1.15; }
+.mono { font-family: Consolas, monospace; }
+.card { position: absolute; background: var(--panel); border: 2px solid var(--line); border-radius: 22px; }
+.tile { position: absolute; border-radius: 10px; border: 2px solid var(--line); background: #16272B; }
+.tile i { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--green); }
+#hud { position: absolute; inset: 0; }
+#bar { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--cyan); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow1"></div><div id="glow2"></div><div id="gridbg"></div>
+  <div id="scenes"></div>
+  <div id="hud">
+    <img id="hudlogo" src="../src/assets/official/dunfaire-d-icon-dark.svg" class="abs" style="left:96px;top:56px;height:52px">
+    <div class="lab" id="hudtag" style="right:96px;top:68px;font-size:20px;color:var(--dim)">DUNFAIRE · WATCHMAN</div>
+    <div id="bar"></div>
+  </div>
+</div>
+<script>
+const FPS = 30, TOTAL = 80;
+const $ = (s, r = document) => r.querySelector(s);
+const clamp = x => Math.max(0, Math.min(1, x));
+const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+const mixc = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+const DIM = [22, 39, 43], GRN = [85, 214, 158], RED = [242, 107, 115], LINE = [42, 61, 65];
+
+// grid of tiles: 16 x 9 at the right of the stage (same place in three scenes)
+const GX = 860, GY = 260, GS = 52, GG = 10, GC = 16, GR = 9;
+function makeGrid(root, dot) {
+  const t = [];
+  for (let i = 0; i < GC * GR; i++) {
+    const d = document.createElement("div"); d.className = "tile";
+    d.style.cssText = `left:${GX + (i % GC) * (GS + GG)}px;top:${GY + Math.floor(i / GC) * (GS + GG)}px;width:${GS}px;height:${GS}px`;
+    if (dot) d.innerHTML = "<i></i>";
+    root.appendChild(d); t.push(d);
+  }
+  return t;
+}
+// fixed scatter order so the first 24 tiles sit all over the grid
+let seed = 7; const order = [...Array(GC * GR).keys()];
+for (let i = order.length - 1; i > 0; i--) { seed = (seed * 1103515245 + 12345) & 0x7fffffff; const j = seed % (i + 1); [order[i], order[j]] = [order[j], order[i]]; }
+const rank = new Array(GC * GR); order.forEach((v, i) => rank[v] = i);
+
+const scenes = [];
+function scene(a, b, html, fn) {
+  const d = document.createElement("div"); d.className = "sc"; d.innerHTML = html; $("#scenes").appendChild(d);
+  scenes.push({ a, b, d, fn, data: [...d.querySelectorAll("[data-a]")].map(e => ({ e, v: e.dataset.a.split(" ").map(Number) })) });
+  return d;
+}
+
+/* ---------- 0: intro (0-6 s) ---------- */
+scene(0, 6, `
+  <img data-a="0.2 1.2 0 30" class="abs" src="../src/assets/official/dunfaire-d-icon-dark.svg" style="left:855px;top:120px;height:210px">
+  <div class="h1" data-a="1.2 1 0 40" style="left:0;width:1920px;top:400px;text-align:center;font-size:104px">Every company<br>needs a watchman.</div>
+  <div class="sub" data-a="2.8 1 0 30" style="left:360px;width:1200px;top:700px;text-align:center;font-size:36px">One who checks every door, every light and every machine — every second, all night.</div>
+  <div class="lab" data-a="4.2 1 0 0" style="left:0;width:1920px;top:880px;text-align:center">WATCHMAN</div>
+`, () => {});
+
+/* ---------- 1: after hours (6-14 s) ---------- */
+const s1 = scene(6, 14, `
+  <div class="lab" data-a="0.3 .8 -30 0" style="left:120px;top:200px">6:00 P.M.</div>
+  <div class="h1" data-a="0.5 1 -40 0" style="left:120px;top:250px;width:760px">Your company,<br>after hours</div>
+  <div id="a24" class="abs" style="left:120px;top:540px;width:700px">
+    <div class="big" data-a="1.2 .9 0 30" style="position:relative;font-size:52px">24 machines in this little building.</div>
+    <div class="sub" data-a="2 .9 0 30" style="position:relative;margin-top:18px">Cameras, doors, Wi-Fi, servers, laptops, backups…</div>
+  </div>
+  <div id="ahun" class="abs" style="left:120px;top:540px;width:700px;opacity:0">
+    <div class="big" style="position:relative;font-size:72px;color:var(--cyan)">Yours has hundreds.</div>
+  </div>
+  <div class="big" data-a="5.6 .9 0 30" style="left:120px;top:900px;width:760px;font-size:36px;color:var(--dim)">Everyone has gone home. Nobody is watching.</div>
+`, null);
+const g1 = makeGrid(s1, false);
+scenes[1].fn = lt => {
+  g1.forEach((t, i) => {
+    const r = rank[i], small = r < 24;
+    const cx = i % GC - 7.5, cy = Math.floor(i / GC) - 4, dist = Math.hypot(cx, cy);
+    const start = small ? 1.0 + r * 0.05 : 4.3 + dist * 0.09;
+    const p = ease((lt - start) / 0.4);
+    t.style.opacity = p; t.style.transform = `scale(${0.6 + 0.4 * p})`;
+    t.style.background = rgb(mixc(DIM, [28, 52, 58], small ? 0.6 : 0));
+  });
+  const k = ease((lt - 4.2) / 0.6);
+  $("#a24", s1).style.opacity = 1 - k; $("#ahun", s1).style.opacity = k; $("#ahun", s1).style.transform = `translateY(${(1 - k) * 24}px)`;
+};
+
+/* ---------- 2: all night (14-22 s) ---------- */
+const s2 = scene(14, 22, `
+  <div class="lab" data-a="0.3 .8 -30 0" style="left:120px;top:200px">ALL NIGHT</div>
+  <div class="h1" data-a="0.5 1 -40 0" style="left:120px;top:250px;width:700px">He checks every window. Every second</div>
+  <div class="big" data-a="3.4 .8 0 24" style="left:120px;top:590px;width:700px">Not once an hour.</div>
+  <div class="big" data-a="4.4 .8 0 24" style="left:120px;top:660px;width:700px">Not when someone remembers.</div>
+  <div class="sub" data-a="5.8 .9 0 24" style="left:120px;top:760px;width:700px;font-size:30px">Every second, every machine — and he never gets bored.</div>
+  <div class="abs" data-a="1.5 .8 0 0" style="left:120px;top:945px;font-size:28px;color:var(--dim);display:flex;align-items:center;gap:16px"><span style="width:18px;height:18px;border-radius:50%;background:var(--green);display:inline-block"></span>A green dot = checked and fine.</div>
+  <div id="clock" class="abs mono" style="left:${GX}px;top:130px;font-size:96px;font-weight:700;letter-spacing:-.02em"></div>
+  <div id="sweep" class="abs" style="top:${GY - 20}px;height:${GR * (GS + GG) + 30}px;width:6px;border-radius:3px;background:var(--cyan);box-shadow:0 0 36px 8px rgba(0,203,248,.55)"></div>
+`, null);
+const g2 = makeGrid(s2, true);
+const SWEEP = 2.0, SPAN = 1.8;
+function dotState(lt, i, start0) {
+  const c = i % GC; const off = start0 + (c / GC) * SPAN;
+  if (lt < off) return null;
+  const k = Math.floor((lt - off) / SWEEP); const tp = off + k * SWEEP;
+  return Math.exp(-(lt - tp) * 4.5);
+}
+scenes[2].fn = lt => {
+  g2.forEach((t, i) => {
+    const pu = dotState(lt, i, 0.4); const on = pu === null ? 0 : 1;
+    t.style.borderColor = rgb(mixc(LINE, GRN, on ? 0.35 + 0.65 * (pu || 0) : 0));
+    t.style.background = rgb(mixc(DIM, GRN, on ? 0.08 + 0.3 * (pu || 0) : 0));
+    const dot = t.firstChild; dot.style.opacity = on ? 0.55 + 0.45 * pu : 0; dot.style.transform = `scale(${1 + 0.5 * (pu || 0)})`;
+  });
+  const sp = ((lt - 0.4) % SWEEP) / SPAN, sw = $("#sweep", s2);
+  sw.style.opacity = lt < 0.4 || sp > 1 ? 0 : 1; sw.style.left = (GX - 3 + sp * GC * (GS + GG)) + "px";
+  const m = Math.round(clamp((lt - 0.4) / 7) * 494 + 360 * 1) % 1440; // 6:00 PM -> 2:14 AM
+  const mm = (18 * 60 + Math.round(clamp((lt - 0.4) / 6.6) * 494)) % 1440, h24 = Math.floor(mm / 60), min = mm % 60;
+  $("#clock", s2).textContent = `${((h24 + 11) % 12) + 1}:${String(min).padStart(2, "0")} ${h24 >= 12 ? "P.M." : "A.M."}`;
+  $("#clock", s2).style.opacity = ease(lt / 0.6);
+};
+
+/* ---------- 3: 2:14 A.M. (22-30 s) ---------- */
+const s3 = scene(22, 30, `
+  <div class="lab" data-a="0.3 .8 -30 0" style="left:120px;top:200px">2:14 A.M.</div>
+  <div class="h1" data-a="0.5 1 -40 0" style="left:120px;top:250px;width:700px">One window looks wrong</div>
+  <div class="card" data-a="2.2 .8 0 30" style="left:120px;top:520px;width:640px;height:230px">
+    <div class="abs" style="left:32px;top:26px;font-size:28px;color:var(--dim)">Camera 4 · 2nd floor</div>
+    <div class="abs" style="left:32px;top:70px;font-size:44px;font-weight:700;color:var(--red)">Stopped recording.</div>
+    <svg class="abs" style="left:32px;top:150px" width="576" height="60" viewBox="0 0 576 60"><polyline id="wave" fill="none" stroke="#F26B73" stroke-width="3"></polyline></svg>
+  </div>
+  <div class="big" data-a="4.4 .7 0 20" style="left:120px;top:800px;width:760px;font-size:34px;font-weight:500">It didn’t crash. It didn’t beep.</div>
+  <div class="big" data-a="5.3 .7 0 20" style="left:120px;top:850px;width:760px;font-size:34px;font-weight:500">It just went quiet.</div>
+  <div class="sub" data-a="6.2 .8 0 20" style="left:120px;top:925px;width:1500px;font-size:28px;color:var(--cyan)">A window that goes dark makes no sound — but the watchman notices.</div>
+  <div class="abs mono" id="c4" style="z-index:5;white-space:nowrap;font-size:22px;color:var(--red);letter-spacing:.1em;opacity:0;background:#0B1416;border:2px solid var(--red);border-radius:10px;padding:6px 12px">◄ CAMERA 4</div>
+`, null);
+const g3 = makeGrid(s3, true);
+const BAD = 3 * GC + 9;
+scenes[3].fn = lt => {
+  g3.forEach((t, i) => {
+    const p = ease((lt - 0.1 - (i % GC + Math.floor(i / GC)) * 0.02) / 0.4);
+    t.style.opacity = p;
+    const bad = i === BAD ? ease((lt - 1.4) / 0.5) : 0;
+    t.style.borderColor = rgb(mixc(mixc(LINE, GRN, 0.35), RED, bad));
+    t.style.background = rgb(mixc(mixc(DIM, GRN, 0.08), RED, bad * 0.4));
+    const dot = t.firstChild; dot.style.background = bad > 0.5 ? "#F26B73" : "#55D69E";
+    t.style.transform = i === BAD ? `scale(${1 + 0.25 * Math.sin(clamp((lt - 1.4) / 1.2) * Math.PI)})` : "none";
+  });
+  const bx = GX + (BAD % GC) * (GS + GG), by = GY + Math.floor(BAD / GC) * (GS + GG);
+  const c4 = $("#c4", s3); c4.style.left = (bx + GS + 14) + "px"; c4.style.top = (by + 8) + "px"; c4.style.opacity = ease((lt - 1.6) / 0.4);
+  const amp = 22 * (1 - clamp((lt - 2.6) / 1.4)); let pts = "";
+  for (let x = 0; x <= 576; x += 6) pts += `${x},${30 + amp * Math.sin(x / 14 + lt * 8) * Math.sin(x / 90)} `;
+  $("#wave", s3).setAttribute("points", pts);
+};
+
+/* ---------- 4: 2:15 A.M. (30-40 s) ---------- */
+scene(30, 40, `
+  <div class="lab" data-a="0.3 .8 -30 0" style="left:120px;top:200px">2:15 A.M.</div>
+  <div class="h1" data-a="0.5 1 -40 0" style="left:120px;top:250px;width:1000px">He knocks on one door.<br>The right one</div>
+  <div class="big" data-a="2 .8 0 24" style="left:120px;top:560px;width:900px">No sirens.</div>
+  <div class="sub" data-a="2.4 .8 0 24" style="left:120px;top:622px;width:900px;font-size:30px">Nothing wakes the whole company.</div>
+  <div class="big" data-a="3.8 .8 0 24" style="left:120px;top:700px;width:900px">No 200 e-mails.</div>
+  <div class="sub" data-a="4.2 .8 0 24" style="left:120px;top:762px;width:900px;font-size:30px">Not a flood of alerts nobody reads.</div>
+  <div class="big" data-a="6 .8 0 24" style="left:120px;top:850px;width:1000px;color:var(--cyan)">One message. One person.</div>
+  <div class="sub" data-a="6.4 .8 0 24" style="left:120px;top:912px;width:1000px;font-size:30px">The one who can actually fix it.</div>
+  <div class="abs" data-a="0.6 1 60 0" style="left:1290px;top:120px;width:430px;height:830px;border-radius:60px;background:#0d1a1d;border:3px solid var(--line);box-shadow:0 30px 90px rgba(0,0,0,.5)">
+    <div class="abs" style="left:0;top:26px;width:100%;text-align:center;color:var(--dim);font-size:22px">Tuesday, 14 October</div>
+    <div class="abs" style="left:0;top:56px;width:100%;text-align:center;font-size:150px;font-weight:700;letter-spacing:-.03em">2:15</div>
+    <div class="abs" data-a="3 .8 0 -50" style="left:24px;top:300px;width:382px;height:250px;border-radius:26px;background:#1a2d31;border:2px solid #2f474c;padding:24px">
+      <div style="display:flex;align-items:center;gap:12px;font-size:20px;color:var(--dim)"><img src="../src/assets/official/dunfaire-d-icon-dark.svg" style="height:26px"><b style="color:var(--text);letter-spacing:.08em">DUNFAIRE</b><span style="margin-left:auto">now</span></div>
+      <div style="margin-top:20px;font-size:28px;font-weight:700;line-height:1.2">Camera 4 (2nd floor) stopped recording</div>
+      <div style="margin-top:14px;font-size:21px;line-height:1.3;color:var(--dim)">Noticed at 02:14. IT has been told. No action needed from you.</div>
+    </div>
+  </div>
+  <div class="abs" data-a="1.4 .8 0 0" style="left:1290px;top:985px;width:430px;text-align:center;font-size:22px;color:var(--dim)">Illustrative screen</div>
+`, () => {});
+
+/* ---------- 5: plain words (40-50 s) ---------- */
+scene(40, 50, `
+  <div class="lab" data-a="0.3 .8 -30 0" style="left:120px;top:190px">WHAT HE SAYS</div>
+  <div class="h1" data-a="0.5 1 -40 0" style="left:120px;top:235px;width:1500px;font-size:70px">He speaks like a person, not a machine</div>
+  <div class="card" data-a="1.2 .8 0 30" style="left:120px;top:420px;width:1680px;height:130px">
+    <div class="abs mono" style="left:36px;top:18px;font-size:20px;letter-spacing:.2em;color:var(--dim)">THE CAMERA, IN ITS OWN WORDS</div>
+    <div class="abs mono" style="left:36px;top:60px;font-size:38px;color:#9fb3b7">cam-04  RTSP_TIMEOUT  0x1F  retry=3  stream=0</div>
+    <div class="abs" id="strike" style="left:30px;top:84px;height:4px;width:0;background:var(--red);border-radius:2px"></div>
+  </div>
+  <div class="card" data-a="3.2 .8 0 30" style="left:120px;top:585px;width:1680px;height:150px;border-color:#2f6f6a">
+    <div class="abs mono" style="left:36px;top:18px;font-size:20px;letter-spacing:.2em;color:var(--cyan)">DUNFAIRE, TO YOU</div>
+    <div class="abs" style="left:36px;top:58px;width:1600px;font-size:34px;font-weight:600;line-height:1.25">Camera 4 on the 2nd floor stopped recording at 02:14. IT has been told — you don’t need to do anything.</div>
+  </div>
+  <div class="card" data-a="5.4 .8 0 30" style="left:120px;top:770px;width:1680px;height:130px;border-color:#2f7a5a">
+    <div class="abs mono" style="left:36px;top:18px;font-size:20px;letter-spacing:.2em;color:var(--green)">DUNFAIRE, SIX HOURS LATER</div>
+    <div class="abs" style="left:36px;top:60px;width:1600px;font-size:38px;font-weight:600">Fixed. Camera 4 is recording again — checked at 08:41.</div>
+  </div>
+  <div class="big" data-a="7.4 .9 0 24" style="left:0;top:935px;width:1920px;text-align:center;font-size:52px;color:var(--cyan)">No codes. No jargon. Ever.</div>
+`, lt => { const k = ease((lt - 3.0) / 0.6); $("#strike").style.width = (k * 800) + "px"; });
+
+/* ---------- 6: fixed (50-60 s) ---------- */
+const TL = [["02:14", "Noticed", RED, 0], ["02:15", "IT told", [139, 92, 246], 1], ["08:40", "Fixed", GRN, 2], ["08:41", "Checked again", GRN, 3]];
+scene(50, 60, `
+  <div class="lab" data-a="0.3 .8 -30 0" style="left:120px;top:200px">8:41 A.M.</div>
+  <div class="h1" data-a="0.5 1 -40 0" style="left:120px;top:250px;width:1500px">Fixed. Checked again. All quiet</div>
+  <div class="abs" style="left:210px;top:560px;width:1500px;height:6px;background:var(--line);border-radius:3px"></div>
+  <div class="abs" id="tlfill" style="left:210px;top:560px;height:6px;width:0;background:linear-gradient(90deg,#F26B73,#8B5CF6,#55D69E);border-radius:3px"></div>
+  ${TL.map(([t, l, c, i]) => `
+  <div class="abs" id="tp${i}" style="left:${210 + i * 500 - 170}px;top:470px;width:340px;text-align:center">
+    <div class="mono" style="font-size:64px;font-weight:700">${t}</div>
+    <div style="height:40px"></div>
+    <div style="font-size:38px;font-weight:600;margin-top:32px;color:rgb(${c})">${l}</div>
+  </div>
+  <div class="abs" id="td${i}" style="left:${210 + i * 500 - 17}px;top:544px;width:34px;height:34px;border-radius:50%;background:rgb(${c});box-shadow:0 0 30px rgba(${c},.7)"></div>`).join("")}
+  <div class="big" data-a="7 1 0 24" style="left:0;top:850px;width:1920px;text-align:center;font-size:56px">You slept through all of it. <span style="color:var(--cyan)">That’s the point.</span></div>
+`, lt => {
+  const prog = ease((lt - 1.2) / 4.8);
+  $("#tlfill").style.width = (prog * 1500) + "px";
+  TL.forEach((_, i) => {
+    const k = ease((lt - (1.2 + i * 1.6)) / 0.5);
+    $("#tp" + i).style.opacity = k; $("#tp" + i).style.transform = `translateY(${(1 - k) * 24}px)`;
+    $("#td" + i).style.opacity = k; $("#td" + i).style.transform = `scale(${0.4 + 0.6 * k})`;
+  });
+});
+
+/* ---------- 7: three things (60-70 s) ---------- */
+const COLS = [
+  ["You sleep.", "He doesn’t.", "Every machine, checked every second, all night and all weekend.", "<path d='M54 40a26 26 0 1 1-30-34 20 20 0 0 0 30 34z'/>"],
+  ["No Monday", "surprises.", "Small problems get fixed while they are still small.", "<rect x='6' y='12' width='48' height='42' rx='8'/><path d='M6 26h48M20 4v14M40 4v14M20 40l8 8 14-16'/>"],
+  ["One screen.", "Every site.", "Office, warehouse or branch — the same calm view on your phone.", "<rect x='16' y='2' width='28' height='56' rx='7'/><path d='M26 50h8'/>"],
+];
+scene(60, 70, `
+  <div class="lab" data-a="0.3 .8 -30 0" style="left:120px;top:190px">WHAT THIS MEANS FOR YOU</div>
+  <div class="h1" data-a="0.5 1 -40 0" style="left:120px;top:235px;width:1500px">Three things change</div>
+  ${COLS.map((c, i) => `
+  <div class="card" data-a="${1.6 + i * 2} .9 0 40" style="left:${120 + i * 580}px;top:430px;width:540px;height:520px">
+    <svg class="abs" style="left:40px;top:40px" width="60" height="60" viewBox="0 0 60 60" fill="none" stroke="#00CBF8" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">${c[3]}</svg>
+    <div class="abs" style="left:40px;top:130px;width:470px;font-size:52px;font-weight:700;line-height:1.08">${c[0]}<br><span style="color:var(--cyan)">${c[1]}</span></div>
+    <div class="abs" style="left:40px;top:300px;width:460px;font-size:30px;line-height:1.35;color:var(--dim)">${c[2]}</div>
+  </div>`).join("")}
+`, () => {});
+
+/* ---------- 8: outro (70-80 s) ---------- */
+scene(70, 80, `
+  <img data-a="0.3 1.2 0 30" class="abs" src="../src/assets/official/dunfaire-d-icon-dark.svg" style="left:874px;top:110px;height:170px">
+  <div class="h1" data-a="1.3 1 0 40" style="left:0;width:1920px;top:340px;text-align:center;font-size:112px">The watchman<br>who never sleeps.</div>
+  <div class="sub" data-a="2.8 1 0 30" style="left:420px;width:1080px;top:650px;text-align:center;font-size:34px">Dunfaire watches every machine in your company, and tells the right person — in plain words — the moment something needs attention.</div>
+  <div class="abs" data-a="4.4 .9 0 24" style="left:660px;top:845px;width:600px;height:84px;border-radius:42px;background:var(--cyan);color:#06222a;font-size:34px;font-weight:700;text-align:center;line-height:84px">Book a guided demo →</div>
+  <div class="mono abs" data-a="5.4 .9 0 0" style="left:0;width:1920px;top:955px;text-align:center;font-size:30px;color:var(--text)">dunfaire.com/request-demo</div>
+  <div class="abs" data-a="6.2 .9 0 0" style="left:0;width:1920px;top:1010px;text-align:center;font-size:22px;color:var(--dim)">Presented by Qlindex.ai</div>
+`, () => {});
+
+window.render = function (t) {
+  $("#glow1").style.cssText += `;left:${300 + 500 * Math.sin(t / 9)}px;top:${-100 + 200 * Math.cos(t / 7)}px`;
+  $("#glow2").style.cssText += `;left:${1000 + 400 * Math.cos(t / 8)}px;top:${400 + 250 * Math.sin(t / 6)}px`;
+  scenes.forEach((s, n) => {
+    const fin = n === 0 ? 1 : clamp((t - s.a) / 0.6), fout = n === scenes.length - 1 ? 1 : clamp((s.b - t) / 0.6);
+    const o = Math.min(fin, fout);
+    s.d.style.display = o > 0 && t >= s.a - 0.01 && t <= s.b + 0.01 ? "block" : "none";
+    if (s.d.style.display === "none") return;
+    s.d.style.opacity = o;
+    const lt = t - s.a;
+    s.data.forEach(({ e, v }) => {
+      const p = ease((lt - v[0]) / v[1]);
+      e.style.opacity = p; e.style.transform = `translate(${(1 - p) * v[2]}px,${(1 - p) * v[3]}px)`;
+    });
+    if (s.fn) s.fn(lt);
+  });
+  $("#bar").style.width = (t / TOTAL * 1920) + "px";
+  const hud = t > 6.5 && t < 70 ? 1 : 0; $("#hudlogo").style.opacity = hud; $("#hudtag").style.opacity = hud * 0.8;
+  $("#glow1").style.opacity = 1;
+};
+window.TOTAL = TOTAL; window.FPS = FPS;
+render(0);
+</script>
+</body>
+</html>
