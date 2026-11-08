@@ -1,0 +1,10 @@
+0.6|It is Monday, eight forty. Five tools. Five streams of alerts. And one tired I.T. manager.
+9.6|At nine, finance calls. The invoices will not load. Which server? Since when? Who owns it?
+20.6|Have you ever run into this problem?
+24.6|The solution is with us.
+30.6|Dunfaire Guardian. One console, on your premises, for every machine, device and threat.
+41.6|Mission Control opens first. One health score and seven areas, from network to incidents, with the next steps for today.
+54.6|Every open alert lands in Alerts. Filter by my queue, unassigned or overdue, and watch the S.L.A. clock. The right one comes first.
+66.6|Protection lists the actively exploited vulnerabilities first, and Mission Control shows whether your backups are healthy.
+76.6|Same Monday, new story. One alert, one owner, one fix. And the invoices load, before finance calls.
+85.6|Dunfaire Guardian. See everything. Fix the right thing first. Book a guided demo at dunfaire dot com.

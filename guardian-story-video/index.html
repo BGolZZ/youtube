@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dunfaire Guardian story video</title>
+<style>
+/* Dunfaire dark palette + the official logo cyan #00CBF8. English only. */
+@font-face { font-family: "Inter Tight"; src: url("../src/assets/inter-tight-latin.woff2") format("woff2"); font-weight: 100 900; }
+:root { --bg:#0B1416; --panel:#122023; --line:#2A3D41; --text:#EAF2F3; --dim:#8FA3A7; --cyan:#00CBF8; --green:#55D69E; --red:#F26B73; --violet:#8B5CF6; --amber:#F2B34C; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: "Inter Tight", Inter, Arial, sans-serif; color: var(--text); background: var(--bg); }
+#glow1, #glow2 { position: absolute; border-radius: 50%; filter: blur(140px); }
+#glow1 { width: 900px; height: 900px; background: rgba(0,203,248,.13); }
+#glow2 { width: 800px; height: 800px; background: rgba(85,214,158,.09); }
+#gridbg { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 80px 80px; }
+.sc { position: absolute; inset: 0; }
+.abs { position: absolute; }
+.lab { position: absolute; font-family: Consolas, monospace; font-size: 24px; letter-spacing: .22em; color: var(--cyan); }
+.h1 { position: absolute; font-size: 78px; font-weight: 700; line-height: 1.04; letter-spacing: -.02em; }
+.sub { position: absolute; font-size: 32px; line-height: 1.3; color: var(--dim); }
+.card { position: absolute; background: var(--panel); border: 2px solid var(--line); border-radius: 22px; }
+.chip { position: absolute; height: 52px; line-height: 48px; padding: 0 24px; border-radius: 26px; border: 2px solid var(--line); font-size: 26px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.cam { position: absolute; width: 96px; height: 60px; border-radius: 8px; background: #0e191c; border: 2px solid var(--line); }
+.cam i { position: absolute; left: 8px; top: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+.clock { position: absolute; font-family: Consolas, monospace; font-weight: 700; letter-spacing: .04em; }
+.row { position: absolute; height: 96px; border-radius: 16px; border: 2px solid var(--line); background: var(--panel); }
+.row b { position: absolute; left: 150px; top: 14px; font-size: 32px; font-weight: 600; white-space: nowrap; }
+.row span { position: absolute; left: 150px; top: 56px; font-size: 22px; color: var(--dim); white-space: nowrap; }
+.row em { position: absolute; right: 24px; top: 26px; font-style: normal; font-size: 22px; font-weight: 700; padding: 6px 18px; border-radius: 20px; }
+.row u { position: absolute; left: 20px; top: 14px; width: 110px; height: 64px; border-radius: 10px; background: #0e191c; border: 2px solid var(--line); }
+.note { position: absolute; font-family: Consolas, monospace; font-size: 20px; letter-spacing: .1em; color: var(--dim); }
+#hud { position: absolute; inset: 0; }
+#bar { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--cyan); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow1"></div><div id="glow2"></div><div id="gridbg"></div>
+  <div id="scenes"></div>
+  <div id="hud">
+    <img id="hudlogo" src="../src/assets/official/dunfaire-d-icon-dark.svg" class="abs" style="left:96px;top:56px;height:52px">
+    <div class="lab" id="hudtag" style="right:96px;top:68px;font-size:20px;color:var(--dim)">DUNFAIRE · GUARDIAN</div>
+    <div id="bar"></div>
+  </div>
+</div>
+<script>
+const FPS = 30, TOTAL = 95;
+const $ = (s, r = document) => r.querySelector(s);
+const clamp = x => Math.max(0, Math.min(1, x));
+const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+
+const scenes = [];
+function scene(a, b, html, fn) {
+  const d = document.createElement("div"); d.className = "sc"; d.innerHTML = html; $("#scenes").appendChild(d);
+  const s = { a, b, d, fn, data: [...d.querySelectorAll("[data-a]")].map(e => ({ e, v: e.dataset.a.split(" ").map(Number) })) };
+  scenes.push(s); return s;
+}
+const tools = ["Network monitor", "Backup tool", "Patch list", "Firewall logs", "Ticket inbox"];
+const tcol = ["#F2B34C", "#F26B73", "#8B5CF6", "#F2B34C", "#F26B73"];
+const areas = ["Network", "Firewalls", "Clients", "Servers", "Backup", "Security", "Incidents"];
+const acol = ["#55D69E", "#55D69E", "#55D69E", "#F2B34C", "#55D69E", "#F26B73", "#F2B34C"];
+const atxt = ["OK", "OK", "OK", "CHECK", "OK", "ACT", "CHECK"];
+function windows() { // five tool windows, each with its own alert count
+  return tools.map((t, i) => `<div class="card" data-a="${.6 + i * .35} .6 0 24" style="left:${940 + (i % 2) * 450}px;top:${250 + Math.floor(i / 2) * 190}px;width:420px;height:160px">
+    <div class="abs" style="left:24px;top:22px;font-size:28px;font-weight:600">${t}</div>
+    <div class="abs" style="left:24px;top:76px;font-size:22px;color:var(--dim)">its own screen, its own alerts</div>
+    <div class="abs ct" data-n="${[14, 3, 27, 9, 41][i]}" style="right:24px;top:20px;min-width:64px;text-align:center;padding:4px 14px;border-radius:20px;font-size:26px;font-weight:700;background:rgba(242,107,115,.18);color:${tcol[i]}">0</div></div>`).join("");
+}
+
+/* ---------- 1: Monday morning (0-9 s) ---------- */
+scene(0, 9, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:330px">THE I.T. OFFICE</div>
+  <div class="clock" data-a=".5 .9 0 30" style="left:120px;top:380px;font-size:150px;color:var(--cyan)">08:40</div>
+  <div class="h1" data-a="1.2 .9 0 40" style="left:120px;top:570px;width:760px;font-size:64px">Five tools.<br>Five streams of alerts.</div>
+  <div class="note" data-a="2.4 .6 0 0" style="left:120px;top:770px">MONDAY · ONE TIRED I.T. MANAGER</div>
+  ${windows()}
+`, lt => { document.querySelectorAll(".sc")[0].querySelectorAll(".ct").forEach(e => e.textContent = Math.round(+e.dataset.n * clamp((lt - 1.5) / 5))); });
+
+/* ---------- 2: finance calls (9-20 s) ---------- */
+scene(9, 20, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:300px">09:00 A.M.</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:354px;width:780px;font-size:72px">Finance calls.<br>The invoices<br>will not load.</div>
+  <div class="chip" data-a="3.2 .6 0 20" style="left:120px;top:700px">Which server?</div>
+  <div class="chip" data-a="4.2 .6 0 20" style="left:390px;top:700px">Since when?</div>
+  <div class="chip" data-a="5.2 .6 0 20" style="left:620px;top:700px">Who owns it?</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:930px;top:260px;width:904px;height:500px"></div>
+  <div class="abs" data-a="1 .6 0 0" style="left:980px;top:290px;font-size:30px;font-weight:700;color:var(--red)">INCOMING CALL · FINANCE</div>
+  <div class="abs" data-a="1.4 .8 0 20" style="left:980px;top:350px;width:804px;height:96px;border-radius:16px;border:2px solid var(--red);background:rgba(242,107,115,.1)"><div class="abs" style="left:28px;top:14px;font-size:32px;font-weight:600">“The invoices will not open.”</div><div class="abs" style="left:28px;top:58px;font-size:22px;color:var(--dim)">Month end is Friday.</div></div>
+  <div class="abs" data-a="2.8 .6 0 0" style="left:980px;top:500px;font-size:100px;font-weight:700;color:var(--dim)" id="q1">?</div>
+  <div class="abs" data-a="3.4 .6 0 0" style="left:1130px;top:520px;font-size:30px;color:var(--dim);width:640px;line-height:1.5">A full disk, a failed backup, a missed patch. Which one is it? Nobody can point at it.</div>
+  <div class="note" data-a="3 .6 0 0" style="left:980px;top:690px;color:var(--red)">NOTHING TO POINT AT</div>
+`, lt => { $("#q1").style.color = `rgba(143,163,167,${.5 + .5 * Math.sin(lt * 4) ** 2})`; });
+
+/* ---------- 3: the question (20-30 s) ---------- */
+scene(20, 30, `
+  <div class="h1" data-a=".3 1 0 40" style="left:0;width:1920px;top:310px;text-align:center;font-size:104px">Have you ever run into<br>this problem?</div>
+  <div class="sub" data-a="4.4 .9 0 30" style="left:0;width:1920px;top:640px;text-align:center;font-size:62px;color:var(--cyan);font-weight:700">The solution is with us.</div>
+`, () => {});
+
+/* ---------- 4: the answer (30-41 s) ---------- */
+scene(30, 41, `
+  <img data-a="0.2 1 0 30" class="abs" src="../src/assets/official/dunfaire-d-icon-dark.svg" style="left:120px;top:250px;height:110px">
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:390px;width:780px;font-size:84px">Dunfaire<br>Guardian</div>
+  <div class="sub" data-a="1.4 .9 0 30" style="left:120px;top:620px;width:740px;font-size:30px">One console, on your premises, for every machine, device and threat.</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:930px;top:250px;width:904px;height:520px"></div>
+  <div class="note" data-a="1 .6 0 0" style="left:970px;top:276px">YOUR PREMISES · ONE CONSOLE</div>
+  <div class="card" data-a="1.2 .7 0 20" style="left:970px;top:340px;width:250px;height:360px;background:#0e191c"></div>
+  <div class="card" data-a="1.8 .7 0 20" style="left:1330px;top:340px;width:230px;height:360px;border-color:var(--cyan);background:rgba(0,203,248,.08)"></div>
+  <div class="card" data-a="2.4 .7 0 20" style="left:1670px;top:340px;width:130px;height:360px;background:#0e191c"></div>
+  <div class="abs" data-a="1.4 .6 0 0" style="left:990px;top:370px;font-size:26px;font-weight:600">Estate</div>
+  <div class="abs" data-a="1.4 .6 0 0" style="left:990px;top:410px;font-size:21px;color:var(--dim);width:210px;line-height:1.5">Servers, clients, network, firewalls, backup</div>
+  <div class="abs" data-a="2 .6 0 0" style="left:1350px;top:370px;font-size:26px;font-weight:600;color:var(--cyan)">Guardian</div>
+  <div class="abs" data-a="2 .6 0 0" style="left:1350px;top:415px;font-size:21px;color:var(--dim);width:190px;line-height:1.5">One health score, one list of what matters</div>
+  <div class="abs" data-a="2.6 .6 0 0" style="left:1686px;top:370px;font-size:26px;font-weight:600">You</div>
+  <div class="abs" data-a="2.6 .6 0 0" style="left:1686px;top:410px;font-size:21px;color:var(--dim);width:100px">One screen</div>
+  <div class="abs" data-a="2.2 .6 0 0" style="left:1228px;top:520px;font-size:48px;color:var(--cyan)">→</div>
+  <div class="abs" data-a="2.8 .6 0 0" style="left:1572px;top:520px;font-size:48px;color:var(--cyan)">→</div>
+`, () => {});
+
+/* ---------- 5: Mission Control (41-54 s) ---------- */
+scene(41, 54, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:290px">MISSION CONTROL</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:344px;width:780px;font-size:72px">One score.<br>Seven areas.</div>
+  <div class="sub" data-a="1.3 .9 0 30" style="left:120px;top:560px;width:740px;font-size:30px">From network to incidents, with the next steps for today.</div>
+  <div class="chip" data-a="3.4 .6 0 20" style="left:120px;top:730px">Next steps</div>
+  <div class="chip" data-a="3.8 .6 0 20" style="left:340px;top:730px">Today’s actions</div>
+  <div class="chip" data-a="4.2 .6 0 20" style="left:620px;top:730px">Shift handover</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:930px;top:210px;width:904px;height:620px"></div>
+  <div class="abs" data-a="1 .6 0 0" style="left:970px;top:240px;font-size:22px;font-family:Consolas,monospace;letter-spacing:.1em;color:var(--dim)">HEALTH SCORE</div>
+  <div class="clock" id="score" data-a="1 .6 0 0" style="left:970px;top:274px;font-size:130px;color:var(--cyan)">0</div>
+  ${areas.map((n, i) => `<div class="row" data-a="${1.4 + i * .3} .6 40 0" style="left:${970 + (i % 2) * 420}px;top:${450 + Math.floor(i / 2) * 84}px;width:400px;height:70px"><b style="left:24px;top:16px;font-size:28px">${n}</b><em style="top:16px;background:${acol[i]}22;color:${acol[i]}">${atxt[i]}</em></div>`).join("")}
+  <div class="note" data-a="3.6 .6 0 0" style="left:970px;top:790px">SAMPLE DATA, FOR ILLUSTRATION</div>
+`, lt => { $("#score").textContent = Math.round(82 * clamp((lt - 1) / 3)); });
+
+/* ---------- 6: Alerts (54-66 s) ---------- */
+scene(54, 66, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:290px">ALERTS · RANKED</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:344px;width:780px;font-size:72px">The right one<br>comes first.</div>
+  <div class="sub" data-a="1.3 .9 0 30" style="left:120px;top:560px;width:740px;font-size:30px">Every open alert in one list. Filter, assign, and watch the S.L.A. clock.</div>
+  <div class="chip" data-a="3 .6 0 20" style="left:120px;top:730px">My queue</div>
+  <div class="chip" data-a="3.4 .6 0 20" style="left:310px;top:730px">Unassigned</div>
+  <div class="chip" data-a="3.8 .6 0 20" style="left:540px;top:730px">Overdue</div>
+  <div class="row" data-a=".8 .6 40 0" id="a0" style="left:960px;top:250px;width:860px;border-color:var(--red)"><u></u><b>Server FIN-02 · disk 98% full</b><span>Invoice store · S.L.A. 00:42 left</span><em style="background:rgba(242,107,115,.18);color:var(--red)">CRITICAL</em></div>
+  <div class="row" data-a="1.1 .6 40 0" style="left:960px;top:366px;width:860px"><u></u><b>Backup job · failed 3 nights</b><span>Finance share</span><em style="background:rgba(242,179,76,.18);color:var(--amber)">HIGH</em></div>
+  <div class="row" data-a="1.4 .6 40 0" style="left:960px;top:482px;width:860px"><u></u><b>Patch pending · 12 clients</b><span>Scheduled</span><em style="background:rgba(143,163,167,.18);color:var(--dim)">MEDIUM</em></div>
+  <div class="chip" data-a="3.6 .6 0 20" style="left:960px;top:640px;width:280px;text-align:center;background:var(--cyan);color:#06222a;border-color:var(--cyan)">Assign to me</div>
+  <div class="chip" data-a="3.9 .6 0 20" style="left:1260px;top:640px;width:260px;text-align:center">Acknowledge</div>
+  <div class="note" data-a="4.4 .6 0 0" style="left:960px;top:740px;color:var(--dim)">SAMPLE ALERTS, FOR ILLUSTRATION</div>
+`, lt => { const on = clamp((lt - 2.4) / .8); $("#a0").style.background = `rgba(242,107,115,${.06 + .08 * on})`; });
+
+/* ---------- 7: Protection and backup (66-76 s) ---------- */
+scene(66, 76, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:310px">PROTECTION · BACKUP</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:364px;width:780px;font-size:72px">Danger first.<br>Safety shown.</div>
+  <div class="sub" data-a="1.3 .9 0 30" style="left:120px;top:580px;width:740px;font-size:30px">Actively exploited vulnerabilities rise to the top. Backup health is one click away.</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:930px;top:250px;width:904px;height:520px"></div>
+  <div class="note" data-a="1 .6 0 0" style="left:970px;top:276px">PROTECTION · VULNERABILITIES</div>
+  <div class="row" data-a="1.2 .6 40 0" style="left:970px;top:330px;width:824px;height:80px;border-color:var(--red)"><b style="left:24px;top:14px;font-size:28px">Actively exploited</b><span style="left:24px;top:48px;font-size:20px">Sorted to the top of the list</span><em style="top:22px;background:rgba(242,107,115,.18);color:var(--red)">FIRST</em></div>
+  <div class="row" data-a="1.6 .6 40 0" style="left:970px;top:426px;width:824px;height:80px"><b style="left:24px;top:14px;font-size:28px">Scan coverage and history</b><span style="left:24px;top:48px;font-size:20px">Know what was checked, and when</span></div>
+  <div class="note" data-a="2.4 .6 0 0" style="left:970px;top:550px">BACKUP · MISSION CONTROL AREA</div>
+  <div class="abs" data-a="2.6 .6 0 20" style="left:970px;top:600px;width:824px;height:20px;border-radius:10px;background:var(--line)"><div id="bk" class="abs" style="left:0;top:0;height:20px;border-radius:10px;background:var(--green)"></div></div>
+  <div class="abs" data-a="3 .6 0 0" style="left:970px;top:650px;font-size:24px;color:var(--green);font-weight:700">Healthy, and you see it at a glance</div>
+`, lt => { $("#bk").style.width = (824 * clamp((lt - 2.6) / 3)) + "px"; });
+
+/* ---------- 8: same Monday, new story (76-85 s) ---------- */
+scene(76, 85, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:330px">SAME MONDAY. NEW STORY.</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:384px;width:780px;font-size:72px">The invoices load.<br>Finance never calls.</div>
+  <div class="note" data-a="5 .6 0 0" style="left:120px;top:640px">ILLUSTRATIVE STORY, NOT A MEASURED RESULT</div>
+  <div class="abs" style="left:960px;top:540px;width:810px;height:8px;border-radius:4px;background:var(--line)"><div id="tl" class="abs" style="left:0;top:0;height:8px;border-radius:4px;background:var(--cyan)"></div></div>
+  <div class="abs" data-a="1 .6 0 20" style="left:940px;top:300px;width:260px"><div class="clock" style="position:static;font-size:64px;color:var(--red)">08:41</div><div style="font-size:30px;font-weight:600;margin-top:10px">One alert</div><div style="font-size:24px;color:var(--dim);margin-top:8px">Disk almost full</div></div>
+  <div class="abs" data-a="2.2 .6 0 20" style="left:1260px;top:300px;width:260px"><div class="clock" style="position:static;font-size:64px;color:var(--amber)">08:44</div><div style="font-size:30px;font-weight:600;margin-top:10px">One owner</div><div style="font-size:24px;color:var(--dim);margin-top:8px">Assigned in a click</div></div>
+  <div class="abs" data-a="3.4 .6 0 20" style="left:1580px;top:300px;width:260px"><div class="clock" style="position:static;font-size:64px;color:var(--green)">08:55</div><div style="font-size:30px;font-weight:600;margin-top:10px">One fix</div><div style="font-size:24px;color:var(--dim);margin-top:8px">Before nine o’clock</div></div>
+`, lt => { $("#tl").style.width = (810 * clamp((lt - 1) / 4)) + "px"; });
+
+/* ---------- 9: outro (85-95 s) ---------- */
+scene(85, 95, `
+  <img data-a="0.3 1.2 0 30" class="abs" src="../src/assets/official/dunfaire-d-icon-dark.svg" style="left:874px;top:110px;height:170px">
+  <div class="h1" data-a="1.0 1 0 40" style="left:0;width:1920px;top:330px;text-align:center;font-size:112px">Dunfaire Guardian</div>
+  <div class="sub" data-a="1.8 1 0 30" style="left:420px;width:1080px;top:490px;text-align:center;font-size:44px;color:var(--cyan)">See everything. Fix the right thing first.</div>
+  <div class="abs" data-a="3.2 .9 0 24" style="left:660px;top:700px;width:600px;height:84px;border-radius:42px;background:var(--cyan);color:#06222a;font-size:34px;font-weight:700;text-align:center;line-height:84px">Book a guided demo →</div>
+  <div class="abs" data-a="4 .9 0 0" style="left:0;width:1920px;top:820px;text-align:center;font-size:30px;font-family:Consolas,monospace">dunfaire.com</div>
+`, () => {});
+
+window.render = function (t) {
+  $("#glow1").style.cssText += `;left:${300 + 500 * Math.sin(t / 9)}px;top:${-100 + 200 * Math.cos(t / 7)}px`;
+  $("#glow2").style.cssText += `;left:${1000 + 400 * Math.cos(t / 8)}px;top:${400 + 250 * Math.sin(t / 6)}px`;
+  scenes.forEach((s, n) => {
+    const fin = n === 0 ? 1 : clamp((t - s.a) / 0.6), fout = n === scenes.length - 1 ? 1 : clamp((s.b - t) / 0.6);
+    const o = Math.min(fin, fout);
+    s.d.style.display = o > 0 && t >= s.a - 0.01 && t <= s.b + 0.01 ? "block" : "none";
+    if (s.d.style.display === "none") return;
+    s.d.style.opacity = o;
+    const lt = t - s.a;
+    s.data.forEach(({ e, v }) => { const p = ease((lt - v[0]) / v[1]); e.style.opacity = p; e.style.transform = `translate(${(1 - p) * v[2]}px,${(1 - p) * v[3]}px)`; });
+    if (s.fn) s.fn(lt);
+  });
+  $("#bar").style.width = (t / TOTAL * 1920) + "px";
+  const hud = t > 0.5 && t < 85 && !(t > 20 && t < 30) ? 1 : 0; $("#hudlogo").style.opacity = hud; $("#hudtag").style.opacity = hud * 0.8;
+};
+window.TOTAL = TOTAL; window.FPS = FPS;
+render(0);
+</script>
+</body>
+</html>
