@@ -1,0 +1,10 @@
+0.6|This is Dunfaire Guardian. One console, on your premises, for every machine, device and threat.
+9.6|Mission Control opens first. One health score and seven areas, from network to incidents. Then next steps, today's actions and shift handover.
+22.6|Overview shows the whole estate: incidents, business impact, asset health and data collection health. Graphs keeps the charts you open every morning.
+35.6|Alerts lists every open alert. Filter by my queue, unassigned or overdue, watch the S.L.A. clock, save views and export to C.S.V.
+47.6|Assets lists every machine as cards, a table, a tree or services. Add one by hand, merge duplicates, and export the list.
+58.6|Network shows switches, firewalls and links, with traffic, C.P.U., memory and alerts for each device.
+67.6|Protection tracks vulnerabilities and weak settings, with the actively exploited ones first, scan coverage and scan history.
+77.6|Administration holds everything behind the console. People and access. Detection and response. Estate and connections. Data and records. And settings for this Guardian.
+92.6|Reports come in nine kinds, now or on a schedule. Update Center keeps the console current. A setup wizard and a tutorial help new teams, in a night or day tone.
+105.6|Dunfaire Guardian. See everything. Fix the right thing first. Book a guided demo at dunfaire dot com.

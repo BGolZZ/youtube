@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dunfaire Guardian console video</title>
+<style>
+/* Same look as watchman-video: Dunfaire dark palette + the official logo cyan #00CBF8. English only. */
+@font-face { font-family: "Inter Tight"; src: url("../src/assets/inter-tight-latin.woff2") format("woff2"); font-weight: 100 900; }
+:root { --bg:#0B1416; --panel:#122023; --line:#2A3D41; --text:#EAF2F3; --dim:#8FA3A7; --cyan:#00CBF8; --green:#55D69E; --red:#F26B73; --violet:#8B5CF6; --amber:#F2B34C; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: "Inter Tight", Inter, Arial, sans-serif; color: var(--text); background: var(--bg); }
+#glow1, #glow2 { position: absolute; border-radius: 50%; filter: blur(140px); }
+#glow1 { width: 900px; height: 900px; background: rgba(0,203,248,.13); }
+#glow2 { width: 800px; height: 800px; background: rgba(85,214,158,.09); }
+#gridbg { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 80px 80px; }
+.sc { position: absolute; inset: 0; }
+.abs { position: absolute; }
+.lab { position: absolute; font-family: Consolas, monospace; font-size: 24px; letter-spacing: .22em; color: var(--cyan); }
+.h1 { position: absolute; font-size: 78px; font-weight: 700; line-height: 1.04; letter-spacing: -.02em; }
+.sub { position: absolute; font-size: 32px; line-height: 1.3; color: var(--dim); }
+.card { position: absolute; background: var(--panel); border: 2px solid var(--line); border-radius: 22px; }
+.row { position: absolute; height: 76px; border-radius: 14px; border: 2px solid transparent; }
+.row b { position: absolute; left: 56px; top: 8px; font-size: 32px; font-weight: 600; white-space: nowrap; }
+.row span { position: absolute; left: 56px; top: 44px; font-size: 22px; color: var(--dim); white-space: nowrap; }
+.row i { position: absolute; left: 18px; top: 28px; width: 18px; height: 18px; border-radius: 50%; background: var(--line); }
+.chip { position: absolute; height: 44px; line-height: 40px; padding: 0 20px; border-radius: 22px; border: 2px solid var(--line); font-size: 22px; font-weight: 600; color: var(--dim); white-space: nowrap; }
+#hud { position: absolute; inset: 0; }
+#bar { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--cyan); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow1"></div><div id="glow2"></div><div id="gridbg"></div>
+  <div id="scenes"></div>
+  <div id="hud">
+    <img id="hudlogo" src="../src/assets/official/dunfaire-d-icon-dark.svg" class="abs" style="left:96px;top:56px;height:52px">
+    <div class="lab" id="hudtag" style="right:96px;top:68px;font-size:20px;color:var(--dim)">DUNFAIRE · GUARDIAN</div>
+    <div id="bar"></div>
+  </div>
+</div>
+<script>
+const FPS = 30, TOTAL = 114;
+const $ = (s, r = document) => r.querySelector(s);
+const clamp = x => Math.max(0, Math.min(1, x));
+const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+
+const scenes = [];
+function scene(a, b, html, fn) {
+  const d = document.createElement("div"); d.className = "sc"; d.innerHTML = html; $("#scenes").appendChild(d);
+  const s = { a, b, d, fn, data: [...d.querySelectorAll("[data-a]")].map(e => ({ e, v: e.dataset.a.split(" ").map(Number) })) };
+  scenes.push(s); return s;
+}
+
+// One scene per console area: label, headline, one line, an optional chip row and up to 7 rows.
+// The row highlight walks down the list while the narrator names the area's parts.
+const COL = { cyan: "#00CBF8", green: "#55D69E", red: "#F26B73", violet: "#8B5CF6", amber: "#F2B34C" };
+function area(a, b, o) {
+  const top = o.chips ? 270 : 220, rows = o.rows, col = COL[o.color || "cyan"];
+  let h = `<div class="lab" data-a=".3 .7 0 20" style="left:120px;top:330px">${o.label}</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:384px;width:760px;font-size:72px">${o.title}</div>
+  <div class="sub" data-a="1.2 .9 0 30" style="left:120px;top:600px;width:740px;font-size:30px">${o.sub}</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:960px;top:150px;width:840px;height:${top - 150 + rows.length * 82 + 24}px"></div>`;
+  if (o.chips) { let x = 988; o.chips.forEach((c, i) => { const w = Math.round(c.length * 12.5 + 44); h += `<div class="chip" data-a="${1 + i * .1} .6 0 14" style="left:${x}px;top:178px;width:${w}px">${c}</div>`; x += w + 12; }); }
+  rows.forEach((r, i) => { h += `<div class="row" data-a="${1.1 + i * .15} .6 40 0" style="left:988px;width:784px;top:${top + i * 82}px"><i></i><b>${r[0]}</b><span>${r[1]}</span></div>`; });
+  const s = scene(a, b, h, lt => {
+    const n = rows.length, len = b - a - 3.4, k = Math.floor(clamp((lt - 2.2) / len) * n * .999);
+    [...s.d.querySelectorAll(".row")].forEach((e, i) => { const on = lt > 2.2 && i === k; e.style.background = on ? "rgba(0,203,248,.10)" : "transparent"; e.style.borderColor = on ? col : "transparent"; e.querySelector("i").style.background = on ? col : "#2A3D41"; });
+  });
+}
+
+/* ---------- 0: intro (0-9 s) ---------- */
+scene(0, 9, `
+  <img data-a="0.2 1.2 0 30" class="abs" src="../src/assets/official/dunfaire-d-icon-dark.svg" style="left:855px;top:150px;height:210px">
+  <div class="lab" data-a=".8 .8 0 20" style="left:0;width:1920px;text-align:center;top:420px">INTELLIGENT CYBER DEFENSE PLATFORM</div>
+  <div class="h1" data-a="1.2 1 0 40" style="left:0;width:1920px;top:480px;text-align:center;font-size:120px">Dunfaire Guardian</div>
+  <div class="sub" data-a="2.4 1 0 30" style="left:380px;width:1160px;top:660px;text-align:center;font-size:40px">One console, on your own premises, for every machine, network device and threat.</div>
+`, () => {});
+
+area(9, 22, { label: "MISSION CONTROL", title: "One score.<br>Seven areas.", sub: "Then next steps, today’s actions, shift handover, capacity, what changed and every site.", chips: ["Live", "24h", "7d", "30d"], color: "green", rows: [
+  ["Network", "devices, faults, unreachable"], ["Firewalls", "state and tunnels"], ["Clients", "workstations reporting"], ["Servers", "health and open alerts"], ["Backup", "servers within their recovery goal"], ["Security", "critical and high alerts"], ["Incidents", "open, high priority, not yet rated"]] });
+
+area(22, 35, { label: "OVERVIEW AND GRAPHS", title: "The morning<br>check.", sub: "Overview shows the whole estate. Graphs keeps the charts you open every day.", color: "cyan", rows: [
+  ["Incidents", "open, with their alerts grouped"], ["Business impact", "assets by how much they matter"], ["Asset health", "healthy, faulty, silent"], ["Data collection health", "who is reporting, who is not"], ["Top problems", "what to fix first"], ["Graphs", "pinned charts and widgets"], ["Metric findings", "what the numbers say"]] });
+
+area(35, 47, { label: "ALERTS", title: "Every alert,<br>with an owner.", sub: "Open alerts split into security and availability, with severity, category and an S.L.A. clock.", chips: ["All open", "My queue", "Unassigned", "Overdue", "Dormant"], color: "red", rows: [
+  ["Severity", "critical, high, medium, low"], ["Categories", "security, network, hardware, backup, video"], ["S.L.A. clock", "time to acknowledge and to resolve"], ["Assignment", "my queue and unassigned"], ["Saved views", "your own filters, kept"], ["Insights", "by severity, over time, by source"], ["Export", "to C.S.V."]] });
+
+area(47, 58, { label: "ASSETS", title: "Every machine<br>in one list.", sub: "Servers, workstations, virtual machines, network gear, cameras and containers.", chips: ["Cards", "Table", "Tree", "Services"], color: "violet", rows: [
+  ["Agents", "installed on the machine"], ["Connectors", "firewall and system managers"], ["Collectors", "gather data for a site"], ["Discovery", "finds devices nobody listed"], ["Add asset", "by hand, any time"], ["Merge duplicates", "keep separate, or merge"], ["Export", "the inventory to C.S.V."]] });
+
+area(58, 67, { label: "NETWORK", title: "The network,<br>at a glance.", sub: "Switches, firewalls and links, with their load and their alerts.", color: "cyan", rows: [
+  ["Total traffic", "all network devices"], ["Busiest interfaces", "where the load is"], ["C.P.U. and memory", "per device"], ["Peak utilisation", "before it hurts"], ["Device inventory", "and device types"], ["Network alerts", "on each device"]] });
+
+area(67, 77, { label: "PROTECTION", title: "Vulnerabilities,<br>worst first.", sub: "Known flaws and weak settings, with the actively exploited ones on top.", chips: ["All findings", "C.V.E.s", "Configuration checks"], color: "amber", rows: [
+  ["Actively exploited", "from the C.I.S.A. known list"], ["Severity and score", "critical to low"], ["Top vulnerable assets", "start there"], ["Open findings over time", "are we winning?"], ["Scan coverage", "what was not scanned"], ["Scan history", "every run, kept"]] });
+
+area(77, 92, { label: "ADMINISTRATION", title: "Everything<br>behind it.", sub: "Set up once, by your own administrators. It works offline, on a closed network.", color: "violet", rows: [
+  ["People and access", "local users, roles, A.P.I. and security"], ["Detection and response", "rules, policy map, S.L.A., notifications"], ["Estate and connections", "assets, integrations, network"], ["Data and records", "backup, audit log, retention, privacy"], ["This Guardian", "settings, licence, maintenance, about"], ["Quick actions", "add a user, backup now, setup wizard"]] });
+
+area(92, 105, { label: "REPORTS AND MORE", title: "Reports,<br>updates, help.", sub: "Made for the whole team, in a night or a day tone.", color: "green", rows: [
+  ["Reports", "nine kinds, from executive to backup"], ["Schedules", "run on a timetable, with deliveries"], ["Update Center", "keeps the console up to date"], ["Setup wizard", "first steps for a new site"], ["Tutorial", "a guided tour of the console"], ["Notifications", "and data collection status"], ["Night or day", "pick the tone you like"]] });
+
+/* ---------- outro (104-111 s) ---------- */
+scene(105, 114, `
+  <img data-a="0.3 1.2 0 30" class="abs" src="../src/assets/official/dunfaire-d-icon-dark.svg" style="left:874px;top:110px;height:170px">
+  <div class="h1" data-a="1.0 1 0 40" style="left:0;width:1920px;top:330px;text-align:center;font-size:112px">Dunfaire Guardian</div>
+  <div class="sub" data-a="1.8 1 0 30" style="left:420px;width:1080px;top:490px;text-align:center;font-size:44px;color:var(--cyan)">See everything. Fix the right thing first.</div>
+  <div class="abs" data-a="2.8 .9 0 24" style="left:660px;top:700px;width:600px;height:84px;border-radius:42px;background:var(--cyan);color:#06222a;font-size:34px;font-weight:700;text-align:center;line-height:84px">Book a guided demo →</div>
+  <div class="abs" data-a="3.6 .9 0 0" style="left:0;width:1920px;top:820px;text-align:center;font-size:30px;font-family:Consolas,monospace">dunfaire.com</div>
+`, () => {});
+
+window.render = function (t) {
+  $("#glow1").style.cssText += `;left:${300 + 500 * Math.sin(t / 9)}px;top:${-100 + 200 * Math.cos(t / 7)}px`;
+  $("#glow2").style.cssText += `;left:${1000 + 400 * Math.cos(t / 8)}px;top:${400 + 250 * Math.sin(t / 6)}px`;
+  scenes.forEach((s, n) => {
+    const fin = n === 0 ? 1 : clamp((t - s.a) / 0.6), fout = n === scenes.length - 1 ? 1 : clamp((s.b - t) / 0.6);
+    const o = Math.min(fin, fout);
+    s.d.style.display = o > 0 && t >= s.a - 0.01 && t <= s.b + 0.01 ? "block" : "none";
+    if (s.d.style.display === "none") return;
+    s.d.style.opacity = o;
+    const lt = t - s.a;
+    s.data.forEach(({ e, v }) => { const p = ease((lt - v[0]) / v[1]); e.style.opacity = p; e.style.transform = `translate(${(1 - p) * v[2]}px,${(1 - p) * v[3]}px)`; });
+    if (s.fn) s.fn(lt);
+  });
+  $("#bar").style.width = (t / TOTAL * 1920) + "px";
+  const hud = t > 9.5 && t < 105 ? 1 : 0; $("#hudlogo").style.opacity = hud; $("#hudtag").style.opacity = hud * 0.8;
+};
+window.TOTAL = TOTAL; window.FPS = FPS;
+render(0);
+</script>
+</body>
+</html>
