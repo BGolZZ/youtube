@@ -21,6 +21,13 @@ Everything on screen and in the voice is English. Same look and pipeline as the 
 Claims come from `../console-video` notes of the live console. Alert names, the score 82 and the story times are
 sample data, labelled on screen. No accuracy or speed numbers are claimed.
 
+## Motion (v2)
+
+Eight different scene transitions (slide left, zoom-through with blur, wipe, slide up, zoom-out, diagonal wipe, tilt, slide right), each with a
+light sweep; kinetic headlines (word by word); per-element entrances (card wipe, chip pop, row slide, label tracking, note reveal, logo spin-in);
+slow push-in on every scene, floating cards, drifting particles, pulse rings on the Guardian reveal and the outro. Timing is unchanged, so the
+narration and music files match. Rollback to the plain version: `git revert` the motion commit (previous video = commit `a75e6ee`).
+
 ## YouTube text
 
 Title: `Dunfaire Guardian: one console for every machine, device and threat`
@@ -45,7 +52,7 @@ The folder is new and nothing else uses it: `git revert <commit>` or `git rm -r 
 
 ## Video file on GitHub
 
-A single push of the 18 MB mp4 kept failing (connection reset), so the final video is stored as five parts. Join:
+A single push of the mp4 kept failing (connection reset), so the final video (28 MB, motion version) is stored as eight parts. Join:
 `cat guardian-story-video/export/parts/final.mp4.part0* > dunfaire-guardian-story-1920x1080-narrated-music.mp4`
 (or rebuild it with the Build commands). Joined SHA-256 is printed by `sha256sum`; local copy:
-1f68c74a6f2fbce7f74e32476b64f7913303a2c8738f15ba738b597d72b37c31
+2f71cdfeecab2a80fe47169096f1219af92373f3c353065136dd3d12dcc7b070
