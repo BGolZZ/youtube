@@ -42,3 +42,10 @@ two intermediate files are rebuilt by the commands above.
 ## Rollback
 
 The folder is new and nothing else uses it: `git revert <commit>` or `git rm -r guardian-story-video`.
+
+## Video file on GitHub
+
+A single push of the 18 MB mp4 kept failing (connection reset), so the final video is stored as five parts. Join:
+`cat guardian-story-video/export/parts/final.mp4.part0* > dunfaire-guardian-story-1920x1080-narrated-music.mp4`
+(or rebuild it with the Build commands). Joined SHA-256 is printed by `sha256sum`; local copy:
+1f68c74a6f2fbce7f74e32476b64f7913303a2c8738f15ba738b597d72b37c31
