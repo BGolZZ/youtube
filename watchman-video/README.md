@@ -37,6 +37,20 @@ node watchman-video/render.mjs --stills <dir> 3,13.8,27     # stills at those se
 
 Needs node, ffmpeg on PATH and Chrome.
 
+## Narration
+
+`narration/script.txt` holds one line per scene (`start seconds|text`), read by Microsoft's neural voice
+`en-US-AvaNeural` through edge-tts. `narration/make-narration.sh` speaks each line, places it at its start time,
+normalises the mix to -16 LUFS and muxes it (AAC 192k, 48 kHz stereo) into
+`export/dunfaire-watchman-1920x1080-narrated.mp4`. The silent video stays as it was.
+
+```
+pip install edge-tts
+bash watchman-video/narration/make-narration.sh [path to edge-tts]
+```
+
+Every line ends before its scene ends (checked with ffmpeg silencedetect).
+
 ## Rollback
 
 The folder is new and nothing else uses it: `git revert <commit>` or `git rm -r watchman-video`.
