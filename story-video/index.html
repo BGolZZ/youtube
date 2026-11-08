@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dunfaire Guardian Vision story video</title>
+<style>
+/* Same look as console-video and watchman-video: Dunfaire dark palette + the official logo cyan #00CBF8. English only. */
+@font-face { font-family: "Inter Tight"; src: url("../src/assets/inter-tight-latin.woff2") format("woff2"); font-weight: 100 900; }
+:root { --bg:#0B1416; --panel:#122023; --line:#2A3D41; --text:#EAF2F3; --dim:#8FA3A7; --cyan:#00CBF8; --green:#55D69E; --red:#F26B73; --violet:#8B5CF6; --amber:#F2B34C; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; font-family: "Inter Tight", Inter, Arial, sans-serif; color: var(--text); background: var(--bg); }
+#glow1, #glow2 { position: absolute; border-radius: 50%; filter: blur(140px); }
+#glow1 { width: 900px; height: 900px; background: rgba(0,203,248,.13); }
+#glow2 { width: 800px; height: 800px; background: rgba(85,214,158,.09); }
+#gridbg { position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px); background-size: 80px 80px; }
+.sc { position: absolute; inset: 0; }
+.abs { position: absolute; }
+.lab { position: absolute; font-family: Consolas, monospace; font-size: 24px; letter-spacing: .22em; color: var(--cyan); }
+.h1 { position: absolute; font-size: 78px; font-weight: 700; line-height: 1.04; letter-spacing: -.02em; }
+.sub { position: absolute; font-size: 32px; line-height: 1.3; color: var(--dim); }
+.card { position: absolute; background: var(--panel); border: 2px solid var(--line); border-radius: 22px; }
+.chip { position: absolute; height: 52px; line-height: 48px; padding: 0 24px; border-radius: 26px; border: 2px solid var(--line); font-size: 26px; font-weight: 600; color: var(--text); white-space: nowrap; }
+.cam { position: absolute; width: 96px; height: 60px; border-radius: 8px; background: #0e191c; border: 2px solid var(--line); }
+.cam i { position: absolute; left: 8px; top: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+.clock { position: absolute; font-family: Consolas, monospace; font-weight: 700; letter-spacing: .04em; }
+.row { position: absolute; height: 96px; border-radius: 16px; border: 2px solid var(--line); background: var(--panel); }
+.row b { position: absolute; left: 150px; top: 14px; font-size: 32px; font-weight: 600; white-space: nowrap; }
+.row span { position: absolute; left: 150px; top: 56px; font-size: 22px; color: var(--dim); white-space: nowrap; }
+.row em { position: absolute; right: 24px; top: 26px; font-style: normal; font-size: 22px; font-weight: 700; padding: 6px 18px; border-radius: 20px; }
+.row u { position: absolute; left: 20px; top: 14px; width: 110px; height: 64px; border-radius: 10px; background: #0e191c; border: 2px solid var(--line); }
+.note { position: absolute; font-family: Consolas, monospace; font-size: 20px; letter-spacing: .1em; color: var(--dim); }
+#hud { position: absolute; inset: 0; }
+#bar { position: absolute; left: 0; bottom: 0; height: 6px; background: var(--cyan); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="glow1"></div><div id="glow2"></div><div id="gridbg"></div>
+  <div id="scenes"></div>
+  <div id="hud">
+    <img id="hudlogo" src="../src/assets/official/dunfaire-d-icon-dark.svg" class="abs" style="left:96px;top:56px;height:52px">
+    <div class="lab" id="hudtag" style="right:96px;top:68px;font-size:20px;color:var(--dim)">DUNFAIRE · GUARDIAN VISION</div>
+    <div id="bar"></div>
+  </div>
+</div>
+<script>
+const FPS = 30, TOTAL = 98;
+const $ = (s, r = document) => r.querySelector(s);
+const clamp = x => Math.max(0, Math.min(1, x));
+const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+
+const scenes = [];
+function scene(a, b, html, fn) {
+  const d = document.createElement("div"); d.className = "sc"; d.innerHTML = html; $("#scenes").appendChild(d);
+  const s = { a, b, d, fn, data: [...d.querySelectorAll("[data-a]")].map(e => ({ e, v: e.dataset.a.split(" ").map(Number) })) };
+  scenes.push(s); return s;
+}
+// Camera wall: 8 x 5 = 40 tiles at (x0, y0)
+function wall(x0, y0, delay) {
+  let h = "";
+  for (let i = 0; i < 40; i++) h += `<div class="cam" data-a="${delay + i * .02} .4 0 10" style="left:${x0 + (i % 8) * 106}px;top:${y0 + Math.floor(i / 8) * 70}px"><i></i></div>`;
+  return h;
+}
+// a figure: head + body, drawn with plain boxes
+function person(x, y, s, col) {
+  return `<div class="abs" style="left:${x + 14 * s}px;top:${y}px;width:${24 * s}px;height:${24 * s}px;border-radius:50%;background:${col}"></div>
+  <div class="abs" style="left:${x}px;top:${y + 28 * s}px;width:${52 * s}px;height:${64 * s}px;border-radius:${22 * s}px ${22 * s}px 8px 8px;background:${col}"></div>`;
+}
+
+/* ---------- 1: 2 A.M. (0-8 s) ---------- */
+scene(0, 8, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:330px">THE WAREHOUSE</div>
+  <div class="clock" data-a=".5 .9 0 30" style="left:120px;top:380px;font-size:150px;color:var(--cyan)">02:00</div>
+  <div class="h1" data-a="1.2 .9 0 40" style="left:120px;top:570px;width:760px;font-size:64px">Forty cameras.<br>One tired guard.</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:930px;top:300px;width:904px;height:420px"></div>
+  ${wall(960, 332, 1)}
+  <div class="note" data-a="2 .6 0 0" style="left:960px;top:664px">LIVE · 40 OF 40</div>
+`, lt => { const k = Math.floor(lt * 9) % 40; [...document.querySelectorAll(".sc")[0].querySelectorAll(".cam")].forEach((e, i) => e.style.borderColor = i === k ? "#00CBF8" : "#2A3D41"); });
+
+/* ---------- 2: a door opens (8-17 s) ---------- */
+scene(8, 17, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:330px">02:14 A.M.</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:384px;width:780px;font-size:72px">A door opens.<br>No one sees it.</div>
+  <div class="sub" data-a="1.3 .9 0 30" style="left:120px;top:600px;width:740px;font-size:30px">Door 7 is one small square on a wall of forty.</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:930px;top:210px;width:904px;height:600px"></div>
+  <div class="note" data-a="1 .6 0 0" style="left:970px;top:236px">CAMERA 07 · LOADING DOCK</div>
+  <div class="abs" style="left:1010px;top:290px;width:760px;height:460px;border-radius:14px;background:#0a1214;border:2px solid var(--line);overflow:hidden">
+    <div class="abs" id="door" style="left:300px;top:60px;width:160px;height:330px;background:#1c2b2f;border:3px solid #3a5258"></div>
+    <div class="abs" id="gap" style="left:300px;top:60px;width:0;height:330px;background:#050809"></div>
+    <div class="abs" id="fig" style="left:330px;top:150px;opacity:0">${person(0, 0, 2, "#8FA3A7")}</div>
+  </div>
+`, lt => {
+  const o = clamp((lt - 2.8) / 1.6); $("#gap").style.width = (130 * o) + "px";
+  const f = clamp((lt - 4.2) / 1.2); $("#fig").style.opacity = f * .85; $("#fig").style.transform = `translateX(${f * 60}px)`;
+});
+
+/* ---------- 3: the morning after (17-30 s) ---------- */
+scene(17, 30, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:300px">8:00 A.M.</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:354px;width:780px;font-size:72px">The shelf<br>is empty.</div>
+  <div class="sub" data-a="1.3 .9 0 30" style="left:120px;top:570px;width:740px;font-size:30px">Now begins the search through hours of footage.</div>
+  <div class="chip" data-a="3 .6 0 20" style="left:120px;top:700px">Which camera?</div>
+  <div class="chip" data-a="4.2 .6 0 20" style="left:380px;top:700px">What time?</div>
+  <div class="chip" data-a="5.4 .6 0 20" style="left:590px;top:700px">Who?</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:930px;top:230px;width:904px;height:420px"></div>
+  <div class="abs" style="left:980px;top:300px;width:804px;height:10px;border-radius:5px;background:var(--line)"></div>
+  <div class="abs" style="left:980px;top:420px;width:804px;height:10px;border-radius:5px;background:var(--line)"></div>
+  <div class="abs" style="left:980px;top:540px;width:804px;height:10px;border-radius:5px;background:var(--line)"></div>
+  <div class="abs" id="b1" style="left:1030px;top:236px;width:120px;height:64px;border-radius:8px;background:#26393d"></div>
+  <div class="abs" id="b2" style="left:1200px;top:356px;width:120px;height:64px;border-radius:8px;background:#26393d"></div>
+  <div class="abs" id="b3" style="left:1370px;top:476px;width:120px;height:64px;border-radius:8px;border:3px dashed var(--red)"></div>
+  <div class="abs" id="scrub" style="left:980px;top:588px;width:804px;height:36px;border-radius:18px;background:#0e191c;border:2px solid var(--line)"><div id="scrubf" class="abs" style="left:0;top:0;height:32px;border-radius:16px;background:var(--cyan);opacity:.5"></div></div>
+  <div class="note" data-a="3 .6 0 0" style="left:980px;top:664px;color:var(--red)">NOTHING TO POINT AT</div>
+  <div class="note" style="left:1600px;top:664px;font-size:20px" id="hrs"></div>
+`, lt => { $("#scrubf").style.width = (804 * clamp((lt - 2.5) / 9)) + "px"; $("#hrs").textContent = clamp((lt - 2.5) / 9) > 0 ? Math.round(clamp((lt - 2.5) / 9) * 8) + " H WATCHED" : ""; });
+
+/* ---------- 4: the question (30-40 s) ---------- */
+scene(30, 40, `
+  <div class="h1" data-a=".3 1 0 40" style="left:0;width:1920px;top:310px;text-align:center;font-size:104px">Have you ever run into<br>this problem?</div>
+  <div class="sub" data-a="4.4 .9 0 30" style="left:0;width:1920px;top:640px;text-align:center;font-size:62px;color:var(--cyan);font-weight:700">The solution is with us.</div>
+`, () => {});
+
+/* ---------- 5: the answer (40-50 s) ---------- */
+scene(40, 50, `
+  <img data-a="0.2 1 0 30" class="abs" src="../src/assets/official/dunfaire-d-icon-dark.svg" style="left:120px;top:250px;height:110px">
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:390px;width:780px;font-size:84px">Dunfaire<br>Guardian Vision</div>
+  <div class="sub" data-a="1.4 .9 0 30" style="left:120px;top:620px;width:740px;font-size:30px">On-premise video intelligence. It reads your camera streams on your own server.</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:930px;top:250px;width:904px;height:520px"></div>
+  <div class="note" data-a="1 .6 0 0" style="left:970px;top:276px">YOUR BUILDING · NOTHING LEAVES IT</div>
+  <div class="card" data-a="1.2 .7 0 20" style="left:970px;top:340px;width:250px;height:360px;background:#0e191c"></div>
+  <div class="card" data-a="1.8 .7 0 20" style="left:1330px;top:340px;width:230px;height:360px;border-color:var(--cyan);background:rgba(0,203,248,.08)"></div>
+  <div class="card" data-a="2.4 .7 0 20" style="left:1670px;top:340px;width:130px;height:360px;background:#0e191c"></div>
+  <div class="abs" data-a="1.4 .6 0 0" style="left:990px;top:370px;font-size:26px;font-weight:600">Cameras</div>
+  <div class="abs" data-a="1.4 .6 0 0" style="left:990px;top:410px;font-size:21px;color:var(--dim);width:210px">Every selected stream, all night</div>
+  <div class="abs" data-a="2 .6 0 0" style="left:1350px;top:370px;font-size:26px;font-weight:600;color:var(--cyan)">Guardian<br>Vision</div>
+  <div class="abs" data-a="2 .6 0 0" style="left:1350px;top:455px;font-size:21px;color:var(--dim);width:190px">Local GPU server. Tracks people and objects.</div>
+  <div class="abs" data-a="2.6 .6 0 0" style="left:1686px;top:370px;font-size:26px;font-weight:600">You</div>
+  <div class="abs" data-a="2.6 .6 0 0" style="left:1686px;top:410px;font-size:21px;color:var(--dim);width:100px">One screen</div>
+  <div class="abs" data-a="2.2 .6 0 0" style="left:1228px;top:520px;font-size:48px;color:var(--cyan)">→</div>
+  <div class="abs" data-a="2.8 .6 0 0" style="left:1572px;top:520px;font-size:48px;color:var(--cyan)">→</div>
+`, () => {});
+
+/* ---------- 6: one event, with evidence (50-63 s) ---------- */
+scene(50, 63, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:290px">ONE EVENT, WITH EVIDENCE</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:344px;width:780px;font-size:72px">Not a hundred<br>alerts. One.</div>
+  <div class="sub" data-a="1.3 .9 0 30" style="left:120px;top:560px;width:740px;font-size:30px">A person lingers in a restricted zone, crosses a line, or leaves something behind.</div>
+  <div class="chip" data-a="3 .6 0 20" style="left:120px;top:730px">Time in a zone</div>
+  <div class="chip" data-a="3.4 .6 0 20" style="left:380px;top:730px">Line crossing</div>
+  <div class="chip" data-a="3.8 .6 0 20" style="left:610px;top:730px">Left behind</div>
+  <div class="card" data-a=".6 .9 60 0" style="left:930px;top:190px;width:904px;height:660px;border-color:var(--red)"></div>
+  <div class="abs" data-a="1.2 .6 0 0" style="left:970px;top:220px;font-size:30px;font-weight:700;color:var(--red)">HIGH · Door 7 · 02:14</div>
+  <div class="abs" data-a="1.6 .8 0 20" style="left:970px;top:280px;width:560px;height:360px;border-radius:14px;background:#0a1214;border:2px solid var(--line);overflow:hidden">
+    <div class="abs" style="left:300px;top:40px;width:140px;height:280px;background:#050809;border:3px solid #3a5258"></div>
+    <div class="abs" style="left:250px;top:120px">${person(0, 0, 1.9, "#8FA3A7")}</div>
+    <div class="abs" id="box" style="left:225px;top:100px;width:190px;height:230px;border:3px solid var(--cyan);border-radius:6px"></div>
+  </div>
+  <div class="abs" data-a="2.4 .6 0 0" style="left:1560px;top:290px;font-size:24px;font-weight:700;color:var(--cyan)">SNAPSHOT</div>
+  <div class="abs" data-a="2.6 .6 0 0" style="left:1560px;top:340px;font-size:22px;color:var(--dim);line-height:1.5;width:250px">Where<br>When<br>How long</div>
+  <div class="abs" data-a="2 .6 0 20" style="left:970px;top:670px;width:824px;height:14px;border-radius:7px;background:var(--line)"><div id="clip" class="abs" style="left:0;top:0;height:14px;border-radius:7px;background:var(--cyan)"></div></div>
+  <div class="abs" data-a="2.2 .6 0 0" style="left:970px;top:704px;font-size:24px;font-weight:700;color:var(--cyan)">SHORT CLIP</div>
+  <div class="abs" data-a="3.4 .6 0 0" style="left:970px;top:760px;font-size:24px;color:var(--dim)">Recorded together as proof, ready to open in one click.</div>
+`, lt => { $("#clip").style.width = (824 * clamp((lt - 3) / 8)) + "px"; $("#box").style.opacity = .6 + .4 * Math.sin(lt * 5) ** 2; });
+
+/* ---------- 7: ranked, and you decide (63-76 s) ---------- */
+scene(63, 76, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:290px">RANKED · YOU DECIDE</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:344px;width:780px;font-size:72px">The important<br>one comes first.</div>
+  <div class="sub" data-a="1.3 .9 0 30" style="left:120px;top:560px;width:740px;font-size:30px">The operator confirms or dismisses. The final decision is always a person’s.</div>
+  <div class="note" data-a="2 .6 0 0" style="left:120px;top:760px;color:var(--green)">YOUR RECORDER KEEPS RECORDING · GUARDIAN VISION ONLY READS</div>
+  <div class="row" data-a=".8 .6 40 0" id="r0" style="left:960px;top:250px;width:860px;border-color:var(--red)"><u></u><b>Door 7 · restricted zone</b><span>02:14 · 3 min inside</span><em style="background:rgba(242,107,115,.18);color:var(--red)">HIGH</em></div>
+  <div class="row" data-a="1.1 .6 40 0" style="left:960px;top:366px;width:860px"><u></u><b>Gate 2 · line crossed</b><span>01:52 · one vehicle</span><em style="background:rgba(242,179,76,.18);color:var(--amber)">MEDIUM</em></div>
+  <div class="row" data-a="1.4 .6 40 0" style="left:960px;top:482px;width:860px"><u></u><b>Aisle 4 · object left</b><span>00:31 · one box</span><em style="background:rgba(143,163,167,.18);color:var(--dim)">LOW</em></div>
+  <div class="chip" data-a="3.4 .6 0 20" id="ok" style="left:960px;top:640px;width:260px;text-align:center;background:var(--cyan);color:#06222a;border-color:var(--cyan)">Confirm</div>
+  <div class="chip" data-a="3.7 .6 0 20" style="left:1240px;top:640px;width:260px;text-align:center">Dismiss</div>
+  <div class="chip" data-a="4 .6 0 20" style="left:1520px;top:640px;width:300px;text-align:center">Assign to a guard</div>
+`, lt => { const on = clamp((lt - 2.4) / .8); $("#r0").style.background = `rgba(242,107,115,${.06 + .08 * on})`; });
+
+/* ---------- 8: same night, new story (76-86 s) ---------- */
+scene(76, 86, `
+  <div class="lab" data-a=".3 .7 0 20" style="left:120px;top:330px">SAME NIGHT. NEW STORY.</div>
+  <div class="h1" data-a=".5 .9 0 40" style="left:120px;top:384px;width:780px;font-size:72px">The door is<br>closed in time.</div>
+  <div class="note" data-a="5 .6 0 0" style="left:120px;top:640px">ILLUSTRATIVE STORY, NOT A MEASURED RESULT</div>
+  <div class="abs" style="left:960px;top:540px;width:810px;height:8px;border-radius:4px;background:var(--line)"><div id="tl" class="abs" style="left:0;top:0;height:8px;border-radius:4px;background:var(--cyan)"></div></div>
+  <div class="abs" data-a="1 .6 0 20" style="left:940px;top:300px;width:260px"><div class="clock" style="position:static;font-size:64px;color:var(--red)">02:14</div><div style="font-size:30px;font-weight:600;margin-top:10px">One event</div><div style="font-size:24px;color:var(--dim);margin-top:8px">Door 7, with a snapshot</div></div>
+  <div class="abs" data-a="2.4 .6 0 20" style="left:1260px;top:300px;width:260px"><div class="clock" style="position:static;font-size:64px;color:var(--amber)">02:15</div><div style="font-size:30px;font-weight:600;margin-top:10px">One decision</div><div style="font-size:24px;color:var(--dim);margin-top:8px">The guard opens the clip</div></div>
+  <div class="abs" data-a="3.8 .6 0 20" style="left:1580px;top:300px;width:260px"><div class="clock" style="position:static;font-size:64px;color:var(--green)">02:18</div><div style="font-size:30px;font-weight:600;margin-top:10px">Door closed</div><div style="font-size:24px;color:var(--dim);margin-top:8px">Before morning</div></div>
+`, lt => { $("#tl").style.width = (810 * clamp((lt - 1) / 4)) + "px"; });
+
+/* ---------- 9: outro (86-98 s) ---------- */
+scene(86, 98, `
+  <img data-a="0.3 1.2 0 30" class="abs" src="../src/assets/official/dunfaire-d-icon-dark.svg" style="left:874px;top:110px;height:170px">
+  <div class="h1" data-a="1.0 1 0 40" style="left:0;width:1920px;top:330px;text-align:center;font-size:112px">Guardian Vision</div>
+  <div class="sub" data-a="1.8 1 0 30" style="left:420px;width:1080px;top:490px;text-align:center;font-size:44px;color:var(--cyan)">Know what happened, while it still matters.</div>
+  <div class="abs" data-a="3.2 .9 0 24" style="left:660px;top:700px;width:600px;height:84px;border-radius:42px;background:var(--cyan);color:#06222a;font-size:34px;font-weight:700;text-align:center;line-height:84px">Book a guided demo →</div>
+  <div class="abs" data-a="4 .9 0 0" style="left:0;width:1920px;top:820px;text-align:center;font-size:30px;font-family:Consolas,monospace">dunfaire.com</div>
+`, () => {});
+
+window.render = function (t) {
+  $("#glow1").style.cssText += `;left:${300 + 500 * Math.sin(t / 9)}px;top:${-100 + 200 * Math.cos(t / 7)}px`;
+  $("#glow2").style.cssText += `;left:${1000 + 400 * Math.cos(t / 8)}px;top:${400 + 250 * Math.sin(t / 6)}px`;
+  scenes.forEach((s, n) => {
+    const fin = n === 0 ? 1 : clamp((t - s.a) / 0.6), fout = n === scenes.length - 1 ? 1 : clamp((s.b - t) / 0.6);
+    const o = Math.min(fin, fout);
+    s.d.style.display = o > 0 && t >= s.a - 0.01 && t <= s.b + 0.01 ? "block" : "none";
+    if (s.d.style.display === "none") return;
+    s.d.style.opacity = o;
+    const lt = t - s.a;
+    s.data.forEach(({ e, v }) => { const p = ease((lt - v[0]) / v[1]); e.style.opacity = p; e.style.transform = `translate(${(1 - p) * v[2]}px,${(1 - p) * v[3]}px)`; });
+    if (s.fn) s.fn(lt);
+  });
+  $("#bar").style.width = (t / TOTAL * 1920) + "px";
+  const hud = t > 0.5 && t < 86 && !(t > 30 && t < 40) ? 1 : 0; $("#hudlogo").style.opacity = hud; $("#hudtag").style.opacity = hud * 0.8;
+};
+window.TOTAL = TOTAL; window.FPS = FPS;
+render(0);
+</script>
+</body>
+</html>
