@@ -15,8 +15,8 @@ for k in 0 1 2 3 4 5 6 7 8 9; do
     mix+="[m$n]"; n=$((n+1))
   done
 done
-# music: lowpass + soft echo, -14 dB before the mix, about 18 dB under the voice, fade in 3 s / out 4 s; voice untouched; limiter on the sum
+# music: lowpass + soft echo, -2 dB, clearly audible in the gaps; sidechain-ducked ~10 dB under the voice so narration stays on top; fade in 3 s / out 4 s; voice untouched; limiter on the sum
 ffmpeg -v error -y -i "$src" "${in[@]}" -filter_complex \
- "${f}${mix}amix=inputs=$n:normalize=0,lowpass=f=1200,aecho=0.8:0.6:700:0.3,aformat=channel_layouts=stereo,atrim=0:95,volume=-14dB,afade=t=in:d=3,afade=t=out:st=91:d=4[mus];[0:a][mus]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89[aout]" \
+ "${f}${mix}amix=inputs=$n:normalize=0,lowpass=f=1200,aecho=0.8:0.6:700:0.3,aformat=channel_layouts=stereo,atrim=0:95,volume=-2dB,afade=t=in:d=3,afade=t=out:st=91:d=4[mus];[0:a]asplit=2[v1][v2];[mus][v1]sidechaincompress=threshold=0.02:ratio=8:attack=20:release=600:makeup=1[duck];[v2][duck]amix=inputs=2:normalize=0:duration=first,alimiter=limit=0.89[aout]" \
  -map 0:v -map "[aout]" -c:v copy -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart "$out"
 echo "wrote $out"

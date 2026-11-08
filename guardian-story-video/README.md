@@ -28,6 +28,13 @@ light sweep; kinetic headlines (word by word); per-element entrances (card wipe,
 slow push-in on every scene, floating cards, drifting particles, pulse rings on the Guardian reveal and the outro. Timing is unchanged, so the
 narration and music files match. Rollback to the plain version: `git revert` the motion commit (previous video = commit `a75e6ee`).
 
+## Motion v3 (owner feedback)
+
+Music raised about 11 dB (gaps now about 6 dB under the voice) and sidechain-ducked about 10 dB under speech, so narration stays on top.
+Every box drifts, breathes and slides during its scene (`data-m` moves). Layouts vary per scene (clock-left, centred stack, three boxes across,
+box-left/text-right, title-top with full-width rows, two boxes side by side, centred timeline) and use the full 1920x1080 frame.
+Previous version: commit `5085dcb`.
+
 ## YouTube text
 
 Title: `Dunfaire Guardian: one console for every machine, device and threat`
@@ -52,7 +59,7 @@ The folder is new and nothing else uses it: `git revert <commit>` or `git rm -r 
 
 ## Video file on GitHub
 
-A single push of the mp4 kept failing (connection reset), so the final video (28 MB, motion version) is stored as eight parts. Join:
+A single push of the mp4 kept failing (connection reset), so the final video (34 MB, motion version 3) is stored as nine parts. Join:
 `cat guardian-story-video/export/parts/final.mp4.part0* > dunfaire-guardian-story-1920x1080-narrated-music.mp4`
 (or rebuild it with the Build commands). Joined SHA-256 is printed by `sha256sum`; local copy:
-2f71cdfeecab2a80fe47169096f1219af92373f3c353065136dd3d12dcc7b070
+ff34b5aec8c3af24cf3a522de4879f7a59c7333c3250933cb308a7afa0ecbe96
